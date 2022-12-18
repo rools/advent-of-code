@@ -1,0 +1,1 @@
+My solutions to [Advent of Code](https://adventofcode.com/) written in Kotlin. Some days are hackier than others, depending on whether I had time to clean them up or not.
