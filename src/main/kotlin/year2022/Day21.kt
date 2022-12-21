@@ -1,5 +1,8 @@
 package year2022
 
+import year2022.Day21.Expression.*
+import year2022.Day21.Operator.*
+
 object Day21 {
     fun solve1(input: List<String>): Long {
         return getExpression(input, includeUnknown = false).evaluate()
@@ -17,15 +20,21 @@ object Day21 {
 
         fun getExpression(monkey: String, monkeys: Map<String, String>): Expression {
             val parts = monkeys.getValue(monkey).split(" ")
+
             return if (includeUnknown && monkey == "humn") {
                 return Unknown
             } else if (parts.size == 1) {
-                Number(parts[0].toLong())
+                Literal(parts[0].toLong())
             } else {
                 Operation(
                     left = getExpression(parts[0], monkeys),
                     right = getExpression(parts[2], monkeys),
-                    operation = parts[1]
+                    operator = when (parts[1]) {
+                        "+" -> ADD
+                        "-" -> SUB
+                        "*" -> MUL
+                        else -> DIV
+                    }
                 )
             }
         }
@@ -36,110 +45,80 @@ object Day21 {
     private fun solve(expression: Expression): Long {
         if (expression !is Operation) return 0
 
-        var left = expression.left
-        var right = expression.right
-
-        if (right.hasUnknown()) {
-            left = expression.right
-            right = expression.left
+        var (unknown, known) = when (expression.left.hasUnknown()) {
+            true -> expression.left to expression.right
+            false -> expression.right to expression.left
         }
 
         while (true) {
-            when (val currentLeft = left) {
+            when (val currentUnknown = unknown) {
                 is Operation -> {
-                    val l = currentLeft.left
-                    val r = currentLeft.right
-                    val leftUnknown = l.hasUnknown()
+                    val left = currentUnknown.left
+                    val right = currentUnknown.right
 
-                    when (currentLeft.operation) {
-                        "+" -> {
-                            if (leftUnknown) {
-                                left = l
-                                right = Operation(right, r, "-")
-                            } else {
-                                left = r
-                                right = Operation(right, l, "-")
-                            }
+                    if (left.hasUnknown()) {
+                        unknown = left
+                        known = when (currentUnknown.operator) {
+                            ADD -> Operation(known, right, SUB)
+                            SUB -> Operation(known, right, ADD)
+                            MUL -> Operation(known, right, DIV)
+                            DIV -> Operation(known, right, MUL)
                         }
-
-                        "-" -> {
-                            if (leftUnknown) {
-                                left = l
-                                right = Operation(right, r, "+")
-                            } else {
-                                left = r
-                                right = Operation(Operation(right, l, "-"), Number(-1), "*")
-                            }
-                        }
-
-                        "*" -> {
-                            if (leftUnknown) {
-                                left = l
-                                right = Operation(right, r, "/")
-                            } else {
-                                left = r
-                                right = Operation(right, l, "/")
-                            }
-                        }
-
-                        "/" -> {
-                            if (leftUnknown) {
-                                left = l
-                                right = Operation(right, r, "*")
-                            } else {
-                                left = r
-                                right = Operation(l, right, "/")
-                            }
+                    } else {
+                        unknown = right
+                        known = when (currentUnknown.operator) {
+                            ADD -> Operation(known, left, SUB)
+                            SUB -> Operation(Operation(known, left, SUB), Literal(-1), MUL)
+                            MUL -> Operation(known, left, DIV)
+                            DIV -> Operation(known, left, DIV)
                         }
                     }
                 }
 
                 is Unknown -> {
-                    return right.evaluate()
+                    return known.evaluate()
                 }
 
-                is Number -> error("No unknown found")
+                is Literal -> error("No unknown found")
             }
         }
     }
 
-    private fun Expression.hasUnknown(): Boolean {
-        return when (this) {
-            is Operation -> left.hasUnknown() || right.hasUnknown()
-            is Number -> false
-            is Unknown -> true
-        }
+    private fun Expression.hasUnknown(): Boolean = when (this) {
+        is Operation -> left.hasUnknown() || right.hasUnknown()
+        is Literal -> false
+        is Unknown -> true
     }
 
-    private fun Expression.evaluate(): Long {
-        return when (this) {
-            is Operation -> {
-                val left = left.evaluate()
-                val right = right.evaluate()
-                when (operation) {
-                    "+" -> left + right
-                    "-" -> left - right
-                    "*" -> left * right
-                    else -> left / right
-                }
+    private fun Expression.evaluate(): Long = when (this) {
+        is Operation -> {
+            val left = left.evaluate()
+            val right = right.evaluate()
+            when (operator) {
+                ADD -> left + right
+                SUB -> left - right
+                MUL -> left * right
+                DIV -> left / right
             }
-
-            is Number -> value
-            is Unknown -> error("Can't evaluate unknown")
         }
+
+        is Literal -> value
+        is Unknown -> error("Can't evaluate unknown")
     }
 
-    sealed interface Expression
+    enum class Operator { ADD, SUB, MUL, DIV }
 
-    data class Operation(
-        val left: Expression,
-        val right: Expression,
-        val operation: String
-    ) : Expression
+    sealed interface Expression {
+        data class Operation(
+            val left: Expression,
+            val right: Expression,
+            val operator: Operator
+        ) : Expression
 
-    data class Number(
-        val value: Long
-    ) : Expression
+        data class Literal(
+            val value: Long
+        ) : Expression
 
-    object Unknown : Expression
+        object Unknown : Expression
+    }
 }
