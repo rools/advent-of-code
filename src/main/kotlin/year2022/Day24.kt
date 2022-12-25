@@ -17,13 +17,13 @@ object Day24 {
         val valley = parseValley(input)
 
         val firstTripSteps = search(
-            start = Step(pos = valley.entrance, steps = 1),
+            start = Step(pos = valley.entrance, steps = 0),
             goal = valley.exit,
             valley = valley
         )
 
         val secondTripSteps = search(
-            start = Step(pos = valley.exit, steps = firstTripSteps + 1),
+            start = Step(pos = valley.exit, steps = firstTripSteps),
             goal = valley.entrance,
             valley = valley
         )
