@@ -6,3 +6,11 @@ enum class Direction {
     SOUTH,
     WEST
 }
+
+val Direction.opposite: Direction
+    get() = when (this) {
+        Direction.NORTH -> Direction.SOUTH
+        Direction.EAST -> Direction.WEST
+        Direction.SOUTH -> Direction.NORTH
+        Direction.WEST -> Direction.EAST
+    }
