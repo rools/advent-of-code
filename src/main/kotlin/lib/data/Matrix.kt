@@ -16,7 +16,7 @@ class Matrix<T>(elements: Collection<Collection<T>>) {
     val colIndices: IntRange
         get() = 0 until cols
 
-    fun contains(pos: Vec2): Boolean {
+    operator fun contains(pos: Vec2): Boolean {
         return pos.y in rowIndices && pos.x in colIndices
     }
 
